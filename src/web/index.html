@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yoz Store - Digital Products</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container nav-wrap">
+        <h1 class="logo">Yoz Store</h1>
+        <nav>
+          <a href="#catalog">Catalogue</a>
+          <a href="#checkout">Checkout</a>
+          <a href="#tracking">Tracking</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero container">
+        <div>
+          <p class="badge">OneClickDZ + OCPay</p>
+          <h2>Buy digital products instantly</h2>
+          <p>Elegant digital store ready for API-driven sales and direct payment flow.</p>
+        </div>
+      </section>
+
+      <section id="catalog" class="container section">
+        <div class="section-head">
+          <h3>Catalogue</h3>
+          <div class="filters">
+            <input id="searchInput" type="search" placeholder="Search products..." />
+            <select id="categoryInput">
+              <option value="">All Categories</option>
+              <option value="accounts">Accounts</option>
+              <option value="subscriptions">Subscriptions</option>
+              <option value="gift-cards">Gift Cards</option>
+            </select>
+            <button id="loadProductsBtn">Search</button>
+          </div>
+        </div>
+        <div id="catalogGrid" class="grid"></div>
+      </section>
+
+      <section id="checkout" class="container section card">
+        <h3>Checkout</h3>
+        <form id="checkoutForm" class="form-grid">
+          <input id="productId" placeholder="Product ID" required />
+          <input id="customerEmail" type="email" placeholder="Email" required />
+          <input id="quantity" type="number" min="1" value="1" required />
+          <button type="submit">Create Payment Link</button>
+        </form>
+        <p id="checkoutResult" class="muted"></p>
+      </section>
+
+      <section id="tracking" class="container section card">
+        <h3>Track Order</h3>
+        <form id="trackingForm" class="form-grid">
+          <input id="trackOrderId" placeholder="Order ID" required />
+          <input id="trackEmail" type="email" placeholder="Email" required />
+          <button type="submit">Track</button>
+        </form>
+        <pre id="trackingResult" class="result-box"></pre>
+      </section>
+    </main>
+
+    <script type="module" src="./storefront.js"></script>
+  </body>
+</html>
