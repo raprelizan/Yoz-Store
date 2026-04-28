@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>متجر Yoz الرقمي</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <h1>متجر Yoz للمنتجات الرقمية</h1>
+      <p>شحن فوري للهاتف والإنترنت + بطاقات الهدايا مع دفع OCPay.</p>
+      <button id="refreshPricesBtn">تحديث المنتجات والأسعار</button>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2>المنتجات</h2>
+        <div class="tabs">
+          <button data-tab="mobile" class="tab active">Mobile Topup</button>
+          <button data-tab="internet" class="tab">Internet Topup</button>
+          <button data-tab="giftCards" class="tab">Gift Cards</button>
+        </div>
+        <div id="productsContainer"></div>
+      </section>
+
+      <section class="card">
+        <h2>إنشاء طلب ودفع</h2>
+        <form id="checkoutForm">
+          <label>نوع الطلب
+            <select id="orderType" required>
+              <option value="mobile">Mobile Topup</option>
+              <option value="internet">Internet Topup</option>
+              <option value="giftCards">Gift Cards</option>
+            </select>
+          </label>
+
+          <label>رقم الهاتف / الحساب
+            <input id="customerNumber" required placeholder="مثال: 0550000000" />
+          </label>
+
+          <label>المبلغ (DZD)
+            <input id="paymentAmount" type="number" min="1" required />
+          </label>
+
+          <label>مرجع الطلب الداخلي
+            <input id="clientRef" placeholder="REF-001" />
+          </label>
+
+          <button type="submit">إنشاء رابط دفع OCPay</button>
+        </form>
+
+        <div id="paymentResult" class="result"></div>
+      </section>
+
+      <section class="card">
+        <h2>تنفيذ الطلب بعد الدفع</h2>
+        <form id="executeOrderForm">
+          <label>نوع الطلب
+            <select id="executeOrderType" required>
+              <option value="mobile">Mobile Topup</option>
+              <option value="internet">Internet Topup</option>
+              <option value="giftCards">Gift Cards</option>
+            </select>
+          </label>
+
+          <label>معرّف رابط الدفع (linkId)
+            <input id="paymentLinkId" required />
+          </label>
+
+          <label>رقم الهاتف / الحساب
+            <input id="executeNumber" required />
+          </label>
+
+          <label>معرّف المنتج / الخطة
+            <input id="productId" required />
+          </label>
+
+          <button type="submit">التحقق من الدفع ثم التنفيذ</button>
+        </form>
+        <div id="executionResult" class="result"></div>
+      </section>
+
+      <section class="card">
+        <h2>لوحة الإدارة</h2>
+        <div class="grid two">
+          <button data-admin="getBalance">عرض الرصيد</button>
+          <button data-admin="listTransactions">عرض العمليات</button>
+          <button data-admin="listGiftCardOrders">طلبات Gift Cards</button>
+          <button data-admin="listMobileTopups">عمليات Mobile</button>
+          <button data-admin="listInternetTopups">عمليات Internet</button>
+        </div>
+        <pre id="adminResult"></pre>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
