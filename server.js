@@ -23,19 +23,14 @@ function assertApiKey(req, res, next) {
   next();
 }
 
-function normalizeErrorPayload(error) {
-  if (error?.error?.message) {
-    return error;
-  }
-
-  return {
-    success: false,
-    error: {
-      code: 'UPSTREAM_ERROR',
-      message: 'حدث خطأ أثناء الاتصال بخدمة OneClickDZ',
-      details: error
+function getValue(payload, keys = []) {
+  for (const key of keys) {
+    const value = payload?.[key];
+    if (value !== undefined && value !== null && value !== '') {
+      return String(value);
     }
-  };
+  }
+  return '';
 }
 
 async function oneClickRequest({ endpoint, method = 'GET', body, query }) {
@@ -55,22 +50,38 @@ async function oneClickRequest({ endpoint, method = 'GET', body, query }) {
       'Content-Type': 'application/json',
       'X-Access-Token': apiKey
     },
-    body: body ? JSON.stringify(body) : undefined
+    body: method !== 'GET' && body ? JSON.stringify(body) : undefined
   });
 
-  const data = await response.json().catch(() => ({
-    success: false,
-    error: {
-      code: 'INVALID_JSON_RESPONSE',
-      message: 'الاستجابة من مزود الخدمة غير صالحة.'
-    }
-  }));
+  const rawText = await response.text();
+  let data;
+
+  try {
+    data = rawText ? JSON.parse(rawText) : {};
+  } catch (_error) {
+    data = {
+      success: false,
+      error: {
+        code: 'INVALID_JSON_RESPONSE',
+        message: 'استجابة غير متوقعة من OneClickDZ.',
+        details: rawText.slice(0, 300)
+      }
+    };
+  }
 
   if (!response.ok || data.success === false) {
-    const error = normalizeErrorPayload(data);
     return {
       status: response.status,
-      data: error
+      data: {
+        success: false,
+        error: {
+          code: data?.error?.code || 'UPSTREAM_ERROR',
+          message: data?.error?.message || 'فشل الطلب إلى OneClickDZ',
+          details: data?.error?.details || null
+        },
+        requestId: data?.requestId || null,
+        meta: data?.meta || null
+      }
     };
   }
 
@@ -83,33 +94,58 @@ async function oneClickRequest({ endpoint, method = 'GET', body, query }) {
 const routeMap = {
   validate: { endpoint: '/validate', method: 'GET' },
 
-  listMobilePlans: { endpoint: '/mobile/list-plans', method: 'GET' },
-  listInternetProducts: { endpoint: '/internet/list-products', method: 'GET' },
-  listGiftCardsCatalog: { endpoint: '/gift-cards/get-catalog', method: 'GET' },
+  listMobilePlans: { endpoint: '/mobile/plans', method: 'GET' },
+  listInternetProducts: { endpoint: '/internet/products', method: 'GET' },
+  listGiftCardsCatalog: { endpoint: '/gift-cards/catalog', method: 'GET' },
 
-  createPaymentLink: { endpoint: '/ocpay/create-link', method: 'POST', required: ['amount'] },
-  checkPayment: { endpoint: '/ocpay/check-payment', method: 'POST', required: ['linkId'] },
+  createPaymentLink: { endpoint: '/ocpay/createLink', method: 'POST', required: ['productInfo'] },
+  checkPayment: {
+    method: 'GET',
+    required: ['paymentRef'],
+    endpointBuilder: (payload) => `/ocpay/checkPayment/${encodeURIComponent(getValue(payload, ['paymentRef', 'linkId', 'ref']))}`
+  },
 
-  mobileSendTopup: { endpoint: '/mobile/send-topup', method: 'POST' },
-  mobileCheckById: { endpoint: '/mobile/check-by-id', method: 'POST', required: ['id'] },
-  mobileCheckByRef: { endpoint: '/mobile/check-by-ref', method: 'POST', required: ['ref'] },
+  mobileSendTopup: { endpoint: '/mobile/send', method: 'POST', required: ['plan_code', 'MSSIDN', 'amount', 'ref'] },
+  mobileCheckById: {
+    method: 'GET',
+    required: ['id'],
+    endpointBuilder: (payload) => `/mobile/check-id/${encodeURIComponent(getValue(payload, ['id']))}`
+  },
+  mobileCheckByRef: {
+    method: 'GET',
+    required: ['ref'],
+    endpointBuilder: (payload) => `/mobile/check-ref/${encodeURIComponent(getValue(payload, ['ref']))}`
+  },
 
-  internetSendTopup: { endpoint: '/internet/send-topup', method: 'POST' },
-  internetValidateNumber: { endpoint: '/internet/validate-number', method: 'POST', required: ['type', 'number'] },
+  internetSendTopup: { endpoint: '/internet/send', method: 'POST', required: ['type', 'number', 'value', 'ref'] },
+  internetValidateNumber: { endpoint: '/internet/check-number', method: 'GET', required: ['type', 'number'] },
+  internetCheckById: {
+    method: 'GET',
+    required: ['id'],
+    endpointBuilder: (payload) => `/internet/check-id/${encodeURIComponent(getValue(payload, ['id']))}`
+  },
+  internetCheckByRef: {
+    method: 'GET',
+    required: ['ref'],
+    endpointBuilder: (payload) => `/internet/check-ref/${encodeURIComponent(getValue(payload, ['ref']))}`
+  },
 
-  giftCardsPlaceOrder: { endpoint: '/gift-cards/place-order', method: 'POST' },
-  giftCardsCheckOrder: { endpoint: '/gift-cards/check-order', method: 'POST', required: ['orderId'] },
+  giftCardsPlaceOrder: { endpoint: '/gift-cards/placeOrder', method: 'POST', required: ['productId', 'typeId', 'quantity', 'ref'] },
+  giftCardsCheckOrder: {
+    method: 'GET',
+    required: ['orderId'],
+    endpointBuilder: (payload) => `/gift-cards/checkOrder/${encodeURIComponent(getValue(payload, ['orderId']))}`
+  },
 
-  getBalance: { endpoint: '/account/get-balance', method: 'GET' },
-  listTransactions: { endpoint: '/account/list-transactions', method: 'GET' },
-  listGiftCardOrders: { endpoint: '/gift-cards/list-orders', method: 'GET' },
-  listMobileTopups: { endpoint: '/mobile/list-topups', method: 'GET' },
-  listInternetTopups: { endpoint: '/internet/list-topups', method: 'GET' }
+  getBalance: { endpoint: '/account/balance', method: 'GET' },
+  listTransactions: { endpoint: '/account/transactions', method: 'GET' },
+  listGiftCardOrders: { endpoint: '/gift-cards/list', method: 'GET' },
+  listMobileTopups: { endpoint: '/mobile/list', method: 'GET' },
+  listInternetTopups: { endpoint: '/internet/list', method: 'GET' }
 };
 
 function validatePayload(requiredFields, payload) {
-  const missing = requiredFields.filter((field) => payload?.[field] === undefined || payload?.[field] === null || payload?.[field] === '');
-  return missing;
+  return requiredFields.filter((field) => payload?.[field] === undefined || payload?.[field] === null || payload?.[field] === '');
 }
 
 app.post('/api/oneclick/:action', assertApiKey, async (req, res) => {
@@ -125,7 +161,9 @@ app.post('/api/oneclick/:action', assertApiKey, async (req, res) => {
     });
   }
 
-  const missing = validatePayload(config.required || [], req.body || {});
+  const payload = req.body || {};
+  const missing = validatePayload(config.required || [], payload);
+
   if (missing.length > 0) {
     return res.status(400).json({
       success: false,
@@ -137,15 +175,16 @@ app.post('/api/oneclick/:action', assertApiKey, async (req, res) => {
   }
 
   try {
+    const endpoint = config.endpointBuilder ? config.endpointBuilder(payload) : config.endpoint;
     const requestConfig = {
-      endpoint: config.endpoint,
+      endpoint,
       method: config.method
     };
 
     if (config.method === 'GET') {
-      requestConfig.query = req.body;
+      requestConfig.query = payload;
     } else {
-      requestConfig.body = req.body;
+      requestConfig.body = payload;
     }
 
     const result = await oneClickRequest(requestConfig);
@@ -162,52 +201,44 @@ app.post('/api/oneclick/:action', assertApiKey, async (req, res) => {
   }
 });
 
-app.post('/api/checkout', assertApiKey, async (req, res) => {
-  const { orderType, customer, payment, orderData } = req.body || {};
+app.get('/api/health/validate', assertApiKey, async (_req, res) => {
+  const result = await oneClickRequest({ endpoint: '/validate', method: 'GET' });
+  return res.status(result.status || 200).json(result.data);
+});
 
-  if (!orderType || !payment?.amount) {
+app.post('/api/checkout', assertApiKey, async (req, res) => {
+  const { orderType, customer, payment } = req.body || {};
+  const amount = Number(payment?.amount || 0);
+
+  if (!orderType || Number.isNaN(amount) || amount < 500) {
     return res.status(400).json({
       success: false,
       error: {
         code: 'VALIDATION_ERROR',
-        message: 'البيانات غير مكتملة. orderType و payment.amount مطلوبان.'
+        message: 'البيانات غير مكتملة. orderType و payment.amount (>=500) مطلوبان.'
       }
     });
   }
 
-  try {
-    const paymentResult = await oneClickRequest({
-      endpoint: '/ocpay/create-link',
-      method: 'POST',
-      body: payment
-    });
+  const requestBody = {
+    productInfo: {
+      title: `طلب ${orderType}`,
+      description: `عميل: ${customer?.number || 'N/A'}`,
+      amount
+    },
+    feeMode: 'NO_FEE'
+  };
 
-    if (!paymentResult.data?.success) {
-      return res.status(paymentResult.status || 400).json(paymentResult.data);
-    }
+  const paymentResult = await oneClickRequest({
+    endpoint: '/ocpay/createLink',
+    method: 'POST',
+    body: requestBody
+  });
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        orderType,
-        customer,
-        orderData,
-        payment: paymentResult.data.data
-      }
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      error: {
-        code: 'CHECKOUT_FAILED',
-        message: 'تعذر إنشاء رابط الدفع.',
-        details: error.message
-      }
-    });
-  }
+  return res.status(paymentResult.status || 200).json(paymentResult.data);
 });
 
-app.get('*', (req, res) => {
+app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

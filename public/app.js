@@ -7,6 +7,13 @@ const state = {
   }
 };
 
+function formatError(errorPayload) {
+  const message = errorPayload?.error?.message || errorPayload?.message || 'خطأ غير متوقع';
+  const code = errorPayload?.error?.code ? `\nالكود: ${errorPayload.error.code}` : '';
+  const requestId = errorPayload?.requestId ? `\nRequest ID: ${errorPayload.requestId}` : '';
+  return `${message}${code}${requestId}`;
+}
+
 async function api(action, payload = {}) {
   const response = await fetch(`/api/oneclick/${action}`, {
     method: 'POST',
@@ -16,9 +23,9 @@ async function api(action, payload = {}) {
 
   const data = await response.json();
   if (!response.ok || data.success === false) {
-    const message = data?.error?.message || 'خطأ غير متوقع';
-    throw new Error(message);
+    throw new Error(formatError(data));
   }
+
   return data;
 }
 
@@ -26,11 +33,32 @@ function simplifyProducts(list) {
   if (!Array.isArray(list)) return [];
 
   return list.map((item) => ({
-    id: item.id || item.productId || item.planId || item.code || '-',
-    name: item.name || item.title || item.operator || 'بدون اسم',
-    price: item.price || item.amount || item.cost || 'غير متوفر',
+    id: item.id || item.code || item._id || '-',
+    name: item.name || item.title || item.operator || item.type || 'بدون اسم',
+    price: item.price || item.amount || item.value || 'غير متوفر',
     raw: item
   }));
+}
+
+function extractListByShape(data = {}) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.products)) return data.products;
+  if (Array.isArray(data.plans)) return data.plans;
+  if (Array.isArray(data.topups)) return data.topups;
+
+  if (Array.isArray(data.categories)) {
+    return data.categories.flatMap((category) =>
+      (category.products || []).map((product) => ({
+        id: product.id,
+        title: `${category.name} - ${product.title || product.name || 'منتج'}`,
+        price: product.price || product.amount,
+        ...product
+      }))
+    );
+  }
+
+  return [];
 }
 
 function renderProducts() {
@@ -71,15 +99,33 @@ async function loadProducts() {
       api('listGiftCardsCatalog')
     ]);
 
-    state.products.mobile = simplifyProducts(mobile.data || []);
-    state.products.internet = simplifyProducts(internet.data || []);
-    state.products.giftCards = simplifyProducts(giftCards.data || []);
+    state.products.mobile = simplifyProducts(extractListByShape(mobile.data));
+    state.products.internet = simplifyProducts(extractListByShape(internet.data));
+    state.products.giftCards = simplifyProducts(extractListByShape(giftCards.data));
     renderProducts();
   } catch (error) {
-    alert(`تعذر جلب المنتجات: ${error.message}`);
+    alert(`تعذر جلب المنتجات:\n${error.message}`);
   } finally {
     button.disabled = false;
     button.textContent = 'تحديث المنتجات والأسعار';
+  }
+}
+
+async function validateApiKey() {
+  const target = document.getElementById('adminResult');
+  target.textContent = 'جاري فحص الاتصال...';
+
+  try {
+    const response = await fetch('/api/health/validate');
+    const data = await response.json();
+
+    if (!response.ok || data.success === false) {
+      throw new Error(formatError(data));
+    }
+
+    target.textContent = `الاتصال ناجح ✅\n${JSON.stringify(data, null, 2)}`;
+  } catch (error) {
+    target.textContent = `فشل التحقق ❌\n${error.message}`;
   }
 }
 
@@ -95,8 +141,7 @@ async function createPayment(event) {
     },
     payment: {
       amount: Number(document.getElementById('paymentAmount').value)
-    },
-    orderData: {}
+    }
   };
 
   try {
@@ -108,12 +153,12 @@ async function createPayment(event) {
     const data = await response.json();
 
     if (!response.ok || data.success === false) {
-      throw new Error(data?.error?.message || 'فشل إنشاء رابط الدفع');
+      throw new Error(formatError(data));
     }
 
     output.textContent = JSON.stringify(data, null, 2);
   } catch (error) {
-    output.textContent = `خطأ: ${error.message}`;
+    output.textContent = `خطأ:\n${error.message}`;
   }
 }
 
@@ -122,27 +167,48 @@ async function executeOrder(event) {
   const output = document.getElementById('executionResult');
 
   const orderType = document.getElementById('executeOrderType').value;
-  const linkId = document.getElementById('paymentLinkId').value.trim();
+  const paymentRef = document.getElementById('paymentLinkId').value.trim();
   const number = document.getElementById('executeNumber').value.trim();
   const productId = document.getElementById('productId').value.trim();
 
   try {
-    await api('checkPayment', { linkId });
+    const paymentStatus = await api('checkPayment', { paymentRef });
+    const paymentState = paymentStatus?.data?.status;
+
+    if (paymentState !== 'CONFIRMED') {
+      throw new Error(`الدفع غير مؤكد بعد. الحالة الحالية: ${paymentState || 'UNKNOWN'}`);
+    }
 
     let executeResponse;
 
     if (orderType === 'mobile') {
-      executeResponse = await api('mobileSendTopup', { number, productId });
+      executeResponse = await api('mobileSendTopup', {
+        plan_code: productId,
+        MSSIDN: number,
+        amount: Number(document.getElementById('paymentAmount').value),
+        ref: `MOB-${Date.now()}`
+      });
     } else if (orderType === 'internet') {
-      await api('internetValidateNumber', { type: 'ADSL', number });
-      executeResponse = await api('internetSendTopup', { number, productId });
+      const type = number.startsWith('213') ? '4G' : 'ADSL';
+      await api('internetValidateNumber', { type, number });
+      executeResponse = await api('internetSendTopup', {
+        type,
+        number,
+        value: Number(productId),
+        ref: `INT-${Date.now()}`
+      });
     } else {
-      executeResponse = await api('giftCardsPlaceOrder', { productId, quantity: 1 });
+      executeResponse = await api('giftCardsPlaceOrder', {
+        productId,
+        typeId: productId,
+        quantity: 1,
+        ref: `GFT-${Date.now()}`
+      });
     }
 
     output.textContent = JSON.stringify(executeResponse, null, 2);
   } catch (error) {
-    output.textContent = `خطأ أثناء التنفيذ: ${error.message}`;
+    output.textContent = `خطأ أثناء التنفيذ:\n${error.message}`;
   }
 }
 
@@ -154,7 +220,7 @@ async function adminAction(action) {
     const data = await api(action);
     output.textContent = JSON.stringify(data, null, 2);
   } catch (error) {
-    output.textContent = `خطأ: ${error.message}`;
+    output.textContent = `خطأ:\n${error.message}`;
   }
 }
 
@@ -171,6 +237,7 @@ function setupEvents() {
   document.getElementById('refreshPricesBtn').addEventListener('click', loadProducts);
   document.getElementById('checkoutForm').addEventListener('submit', createPayment);
   document.getElementById('executeOrderForm').addEventListener('submit', executeOrder);
+  document.getElementById('validateApiBtn').addEventListener('click', validateApiKey);
 
   document.querySelectorAll('[data-admin]').forEach((button) => {
     button.addEventListener('click', () => adminAction(button.dataset.admin));

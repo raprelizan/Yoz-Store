@@ -1,11 +1,11 @@
 # متجر Yoz الرقمي (OneClickDZ)
 
-متجر ويب عربي لبيع المنتجات الرقمية بالاعتماد على OneClickDZ API v3.
+متجر ويب عربي لبيع المنتجات الرقمية بالاعتماد على **OneClickDZ API v3** عبر توثيقهم الرسمي فقط.
 
 ## المتطلبات
 
 - Node.js 18+
-- API Key من OneClickDZ
+- API Key صالح من OneClickDZ
 
 ## الإعداد
 
@@ -21,7 +21,11 @@ npm install
 cp .env.example .env
 ```
 
-3. أضف قيمة `ONECLICK_API_KEY` داخل `.env`.
+3. ضع المفتاح في `.env`:
+
+```env
+ONECLICK_API_KEY=YOUR_REAL_KEY
+```
 
 4. تشغيل التطبيق:
 
@@ -29,27 +33,48 @@ cp .env.example .env
 npm run dev
 ```
 
-## ما الذي يدعمه المشروع؟
+## نقاط التكامل المستخدمة (v3)
 
-- جلب المنتجات مباشرة من API:
-  - `/mobile/list-plans`
-  - `/internet/list-products`
-  - `/gift-cards/get-catalog`
-- الدفع عبر OCPay:
-  - `/ocpay/create-link`
-  - `/ocpay/check-payment`
-- تنفيذ الطلبات:
-  - Mobile: `/mobile/send-topup` + check endpoints
-  - Internet: `/internet/send-topup` + validate endpoint
-  - Gift Cards: `/gift-cards/place-order` + `/gift-cards/check-order`
-- لوحة إدارة:
-  - الرصيد
-  - العمليات
-  - الطلبات
+- التحقق: `GET /validate`
+- Mobile:
+  - `GET /mobile/plans`
+  - `POST /mobile/send`
+  - `GET /mobile/check-id/:id`
+  - `GET /mobile/check-ref/:ref`
+  - `GET /mobile/list`
+- Internet:
+  - `GET /internet/products`
+  - `GET /internet/check-number`
+  - `POST /internet/send`
+  - `GET /internet/check-id/:id`
+  - `GET /internet/check-ref/:ref`
+  - `GET /internet/list`
+- Gift Cards:
+  - `GET /gift-cards/catalog`
+  - `POST /gift-cards/placeOrder`
+  - `GET /gift-cards/checkOrder/:orderId`
+  - `GET /gift-cards/list`
+- OCPay:
+  - `POST /ocpay/createLink`
+  - `GET /ocpay/checkPayment/:ref`
+- Account:
+  - `GET /account/balance`
+  - `GET /account/transactions`
+
+## تشخيص الخطأ: "حدث خطأ أثناء الاتصال بخدمة OneClickDZ"
+
+تم تحسين المشروع لعرض **رسالة الخطأ الأصلية من OneClickDZ** بدل رسالة عامة فقط، مع `code` و `requestId` عند توفرهما.
+
+إذا استمر الخطأ:
+
+1. اضغط زر **"فحص الاتصال مع OneClickDZ (/validate)"** داخل لوحة الإدارة.
+2. تأكد أن المفتاح صحيح ومفعل.
+3. إذا ظهر `IP_NOT_ALLOWED` فقم بإضافة IP السيرفر إلى whitelist في لوحة OneClickDZ.
+4. إذا ظهر `INVALID_ACCESS_TOKEN` فالمفتاح غير صحيح/منتهي.
 
 ## الأمان
 
 - API Key محفوظ في Environment Variables
-- منع تسريب المفتاح للواجهة الأمامية
-- التحقق من البيانات الأساسية قبل إرسال الطلبات
-- معالجة أخطاء موحّدة لعرض رسائل واضحة
+- لا يتم كشف المفتاح للواجهة الأمامية
+- Validation أساسي للمدخلات قبل أي طلب خارجي
+- تمرير أخطاء مزود الخدمة بشفافية لتسهيل الدعم
