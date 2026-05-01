@@ -36,6 +36,16 @@ function simplifyProducts(list) {
     id: item.id || item.code || item._id || '-',
     name: item.name || item.title || item.operator || item.type || 'بدون اسم',
     price: item.price || item.amount || item.value || 'غير متوفر',
+    image:
+      item.image ||
+      item.img ||
+      item.photo ||
+      item.logo ||
+      item.icon ||
+      item.thumbnail ||
+      item.picture ||
+      '',
+    currency: item.currency || 'DZD',
     raw: item
   }));
 }
@@ -76,9 +86,20 @@ function renderProducts() {
         .map(
           (product) => `
           <div class="product-item">
+            <div class="product-media">
+              ${
+                product.image
+                  ? `<img src="${product.image}" alt="${product.name}" loading="lazy" />`
+                  : '<div class="product-placeholder">بدون صورة</div>'
+              }
+            </div>
             <strong>${product.name}</strong>
             <div>المعرّف: ${product.id}</div>
-            <div>السعر: ${product.price}</div>
+            <div>السعر: ${product.price} ${product.currency}</div>
+            <details>
+              <summary>تفاصيل إضافية من API</summary>
+              <pre>${JSON.stringify(product.raw, null, 2)}</pre>
+            </details>
           </div>
         `
         )

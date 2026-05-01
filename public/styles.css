@@ -82,6 +82,41 @@ input, select {
   border: 1px solid #2e436a;
   border-radius: 10px;
   padding: .7rem;
+  display: grid;
+  gap: .5rem;
+}
+
+.product-media {
+  width: 100%;
+  height: 140px;
+  border-radius: 10px;
+  background: #0b1a38;
+  border: 1px solid #2e436a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.product-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-placeholder {
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.product-item details {
+  border-top: 1px dashed #2e436a;
+  padding-top: .4rem;
+}
+
+.product-item summary {
+  cursor: pointer;
+  color: var(--primary);
 }
 
 .grid.two {
