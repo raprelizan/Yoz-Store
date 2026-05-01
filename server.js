@@ -7,6 +7,7 @@ const port = process.env.PORT || 3000;
 const baseUrl = process.env.ONECLICK_BASE_URL || 'https://api.oneclickdz.com/v3';
 const apiKey = process.env.ONECLICK_API_KEY;
 const recentOrders = [];
+const executionRefs = new Map();
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -347,6 +348,19 @@ app.post('/api/execute-with-tracking', assertApiKey, async (req, res) => {
       ref: sanitizeString(payload?.ref || `REF-${Date.now()}`, 64)
     };
 
+    const now = Date.now();
+    const existing = executionRefs.get(safePayload.ref);
+    if (existing && now - existing < 5 * 60 * 1000) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          code: 'DUPLICATE_REF',
+          message: 'تم استخدام نفس المرجع ref مؤخراً. استخدم ref جديداً لتجنب تنفيذ مكرر.'
+        }
+      });
+    }
+    executionRefs.set(safePayload.ref, now);
+
     if (orderType === 'mobile') {
       submitResult = await oneClickRequest({ endpoint: '/mobile/send', method: 'POST', body: safePayload });
       checkById = (id) => oneClickRequest({ endpoint: `/mobile/check-id/${encodeURIComponent(id)}`, method: 'GET' });
@@ -416,6 +430,7 @@ app.get('/api/system/status', (_req, res) => {
       apiBase: baseUrl,
       hasApiKey: Boolean(apiKey),
       recentOrdersCount: recentOrders.length,
+      recentExecutionRefs: executionRefs.size,
       timestamp: new Date().toISOString()
     }
   });

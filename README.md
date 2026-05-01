@@ -195,3 +195,10 @@ Endpoint المستخدم: `POST /api/execute-with-tracking`.
 - `GET /api/orders/recent.csv`: تصدير السجل بصيغة CSV.
 
 تم ربطها بأزرار مباشرة في لوحة الإدارة.
+
+
+## حماية إضافية ضد التكرار (Idempotency by ref)
+
+- عند `POST /api/execute-with-tracking` يتم منع تنفيذ نفس `ref` خلال آخر 5 دقائق.
+- إذا تم تكرار `ref` يتم إرجاع `409` مع الكود `DUPLICATE_REF`.
+- هذا يمنع تنفيذ مكرر بالخطأ في عمليات الشحن.
