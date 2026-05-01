@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yoz Store | متجر المنتجات الرقمية</title>
+    <meta name="description" content="متجر عربي لبيع المنتجات الرقمية مع تكامل OneClickDZ API." />
+    <meta name="theme-color" content="#090f1f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Yoz Store" />
+    <meta name="robots" content="index, follow" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="pageLoader" class="page-loader">
+      <div class="pulse-dot"></div>
+      <p>جاري تحميل منتجات OneClickDZ...</p>
+    </div>
+
+    <header class="hero">
+      <div class="hero-badge">OneClickDZ API Powered</div>
+      <h1>متجر Yoz للمنتجات الرقمية</h1>
+      <p>شحن فوري للهاتف والإنترنت + بطاقات الهدايا مع دفع OCPay.</p>
+      <button id="refreshPricesBtn">تحديث المنتجات والأسعار</button>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2>المنتجات</h2>
+        <input id="productSearchInput" placeholder="ابحث عن منتج بالاسم أو المعرّف..." />
+        <div class="tabs">
+          <button data-tab="mobile" class="tab active">Mobile Topup</button>
+          <button data-tab="internet" class="tab">Internet Topup</button>
+          <button data-tab="giftCards" class="tab">Gift Cards</button>
+        </div>
+        <div id="productsContainer"></div>
+      </section>
+
+      <section class="card">
+        <h2>إنشاء طلب ودفع</h2>
+        <form id="checkoutForm">
+          <label>نوع الطلب
+            <select id="orderType" required>
+              <option value="mobile">Mobile Topup</option>
+              <option value="internet">Internet Topup</option>
+              <option value="giftCards">Gift Cards</option>
+            </select>
+          </label>
+
+          <label>رقم الهاتف / الحساب
+            <input id="customerNumber" required placeholder="مثال: 0550000000" />
+          </label>
+
+          <label>المبلغ (DZD)
+            <input id="paymentAmount" type="number" min="1" required />
+          </label>
+
+          <label>مرجع الطلب الداخلي
+            <input id="clientRef" placeholder="REF-001" />
+          </label>
+
+          <button type="submit">إنشاء رابط دفع OCPay</button>
+        </form>
+
+        <div id="paymentResult" class="result"></div>
+      </section>
+
+      <section class="card">
+        <h2>تنفيذ الطلب بعد الدفع</h2>
+        <form id="executeOrderForm">
+          <label>نوع الطلب
+            <select id="executeOrderType" required>
+              <option value="mobile">Mobile Topup</option>
+              <option value="internet">Internet Topup</option>
+              <option value="giftCards">Gift Cards</option>
+            </select>
+          </label>
+
+          <label>معرّف رابط الدفع (linkId)
+            <input id="paymentLinkId" required />
+          </label>
+
+          <label>رقم الهاتف / الحساب
+            <input id="executeNumber" required />
+          </label>
+
+          <label>معرّف المنتج / الخطة
+            <input id="productId" required />
+          </label>
+
+          <button type="submit">التحقق من الدفع ثم التنفيذ</button>
+        </form>
+        <div id="executionResult" class="result"></div>
+      </section>
+
+      <section class="card">
+        <h2>متابعة حالة الطلب</h2>
+        <form id="statusForm">
+          <label>نوع الخدمة
+            <select id="statusOrderType" required>
+              <option value="mobile">Mobile</option>
+              <option value="internet">Internet</option>
+              <option value="giftCards">Gift Cards</option>
+            </select>
+          </label>
+          <label>طريقة التحقق
+            <select id="statusLookupBy" required>
+              <option value="id">ID</option>
+              <option value="ref">REF</option>
+            </select>
+          </label>
+          <label>القيمة
+            <input id="statusLookupValue" required placeholder="مثال: 12345 أو REF-001" />
+          </label>
+          <button type="submit">تحقق من الحالة</button>
+        </form>
+        <div id="statusResult" class="result"></div>
+      </section>
+
+      <section class="card">
+        <h2>لوحة الإدارة</h2>
+        <button id="validateApiBtn">فحص الاتصال مع OneClickDZ (/validate)</button>
+        <button id="overviewBtn">تحديث النظرة العامة للحساب</button>
+        <button id="recentOrdersBtn">عرض الطلبات المحلية الأخيرة</button>
+        <div class="grid two">
+          <button data-admin="getBalance">عرض الرصيد</button>
+          <button data-admin="listTransactions">عرض العمليات</button>
+          <button data-admin="listGiftCardOrders">طلبات Gift Cards</button>
+          <button data-admin="listMobileTopups">عمليات Mobile</button>
+          <button data-admin="listInternetTopups">عمليات Internet</button>
+        </div>
+        <pre id="adminResult"></pre>
+        <pre id="recentOrdersResult"></pre>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
