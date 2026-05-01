@@ -167,3 +167,16 @@ npm run dev
 5. إرجاع النتيجة النهائية للمستخدم.
 
 Endpoint المستخدم: `POST /api/execute-with-tracking`.
+
+
+## تغذية عامة إضافية (News/Notifications/Discounts)
+
+تم إضافة endpoint موحد: `GET /api/public-feed` يجلب البيانات من الروابط التي أرسلتها:
+- منتجات عامة
+- رد دعم
+- أخبار
+- إشعارات
+- خصومات
+- معلومات OSI
+
+وتم ربطها بواجهة عرض داخل الصفحة.

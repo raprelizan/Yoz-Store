@@ -366,6 +366,22 @@ async function loadAdminOverview() {
   }
 }
 
+async function loadPublicFeed() {
+  const output = document.getElementById('publicFeedResult');
+  output.textContent = 'جاري التحميل...';
+
+  try {
+    const response = await fetch('/api/public-feed');
+    const data = await response.json();
+    if (!response.ok || data.success === false) {
+      throw new Error(formatError(data));
+    }
+    output.textContent = JSON.stringify(data.data, null, 2);
+  } catch (error) {
+    output.textContent = `خطأ:\n${error.message}`;
+  }
+}
+
 function setupEvents() {
   document.querySelectorAll('.tab').forEach((button) => {
     button.addEventListener('click', () => {
@@ -385,6 +401,7 @@ function setupEvents() {
   document.getElementById('executeOrderForm').addEventListener('submit', executeOrder);
   document.getElementById('statusForm').addEventListener('submit', checkOrderStatus);
   document.getElementById('recentOrdersBtn').addEventListener('click', loadRecentOrders);
+  document.getElementById('publicFeedBtn').addEventListener('click', loadPublicFeed);
   document.getElementById('validateApiBtn').addEventListener('click', validateApiKey);
 
   document.querySelectorAll('[data-admin]').forEach((button) => {
@@ -396,3 +413,4 @@ function setupEvents() {
 setupEvents();
 loadProducts();
 loadRecentOrders();
+loadPublicFeed();

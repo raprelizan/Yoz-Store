@@ -107,6 +107,16 @@ async function oneClickRequestWithFallback({ endpoints, method = 'GET', body, qu
   return lastResult;
 }
 
+async function fetchExternalJson(url) {
+  const response = await fetch(url, { method: 'GET' });
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (_error) {
+    return { raw: text };
+  }
+}
+
 const routeMap = {
   validate: { endpoint: '/validate', method: 'GET' },
 
@@ -430,6 +440,33 @@ app.get('/api/admin/overview', assertApiKey, async (_req, res) => {
       error: {
         code: 'ADMIN_OVERVIEW_FAILED',
         message: 'تعذر تحميل نظرة عامة للحساب من OneClickDZ.',
+        details: error.message
+      }
+    });
+  }
+});
+
+app.get('/api/public-feed', async (_req, res) => {
+  try {
+    const [products, reply, news, notifications, discounts, osi] = await Promise.all([
+      fetchExternalJson('https://contabo-payzaad.oneclickdz.com/api/getnokey/prodmain/all'),
+      fetchExternalJson('https://contabo-payzaad.oneclickdz.com/api/support/get_one_reply'),
+      fetchExternalJson('https://contabo-payzaad.oneclickdz.com/api/getnokey/getnews/dd'),
+      fetchExternalJson('https://contabo-payzaad.oneclickdz.com/api/get/notification/all'),
+      fetchExternalJson('https://contabo-payzaad.oneclickdz.com/api/getnokey/discounts/223'),
+      fetchExternalJson('https://contabo-payzaad.oneclickdz.com/api/getusr/OSI/?v=v6.0')
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: { products, reply, news, notifications, discounts, osi }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'PUBLIC_FEED_FAILED',
+        message: 'تعذر جلب التغذية العامة.',
         details: error.message
       }
     });
