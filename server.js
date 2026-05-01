@@ -298,6 +298,30 @@ app.get('/api/orders/recent', assertApiKey, (_req, res) => {
   return res.status(200).json({ success: true, data: recentOrders });
 });
 
+app.delete('/api/orders/recent', assertApiKey, (_req, res) => {
+  recentOrders.length = 0;
+  return res.status(200).json({ success: true, data: [] });
+});
+
+app.get('/api/orders/recent.csv', assertApiKey, (_req, res) => {
+  const header = 'id,createdAt,type,customer,productId,amount,providerRef,status';
+  const rows = recentOrders.map((row) => [
+    row.id,
+    row.createdAt,
+    row.type,
+    JSON.stringify(row.customer || {}).replaceAll(',', ';'),
+    row.productId,
+    row.amount,
+    row.providerRef,
+    row.status
+  ].map((v) => `"${String(v ?? '').replaceAll('"', '""')}"`).join(','));
+
+  const csv = [header, ...rows].join('\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename=\"recent-orders.csv\"');
+  return res.status(200).send(csv);
+});
+
 app.post('/api/execute-with-tracking', assertApiKey, async (req, res) => {
   const { orderType, payload } = req.body || {};
 

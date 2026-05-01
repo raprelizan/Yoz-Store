@@ -186,3 +186,12 @@ Endpoint المستخدم: `POST /api/execute-with-tracking`.
 
 - Sanitization أساسي للمدخلات النصية الحساسة قبل الإرسال للـ API (مثل `ref`, `orderType`, `customer number`).
 - Endpoint جديد `GET /api/system/status` لعرض حالة الخدمة محلياً (API base, وجود API key, عدد الطلبات المحلية, timestamp).
+
+
+## إدارة السجل المحلي للطلبات
+
+- `GET /api/orders/recent`: جلب الطلبات المحلية.
+- `DELETE /api/orders/recent`: مسح جميع الطلبات المحلية.
+- `GET /api/orders/recent.csv`: تصدير السجل بصيغة CSV.
+
+تم ربطها بأزرار مباشرة في لوحة الإدارة.

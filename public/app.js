@@ -310,6 +310,25 @@ async function loadRecentOrders() {
   }
 }
 
+async function clearRecentOrders() {
+  const output = document.getElementById('recentOrdersResult');
+  output.textContent = 'جاري الحذف...';
+  try {
+    const response = await fetch('/api/orders/recent', { method: 'DELETE' });
+    const data = await response.json();
+    if (!response.ok || data.success === false) {
+      throw new Error(formatError(data));
+    }
+    output.textContent = 'تم حذف الطلبات المحلية بنجاح.';
+  } catch (error) {
+    output.textContent = `خطأ:\n${error.message}`;
+  }
+}
+
+function downloadRecentOrdersCsv() {
+  window.open('/api/orders/recent.csv', '_blank');
+}
+
 async function adminAction(action) {
   const output = document.getElementById('adminResult');
   output.textContent = 'جاري التنفيذ...';
@@ -417,6 +436,8 @@ function setupEvents() {
   document.getElementById('executeOrderForm').addEventListener('submit', executeOrder);
   document.getElementById('statusForm').addEventListener('submit', checkOrderStatus);
   document.getElementById('recentOrdersBtn').addEventListener('click', loadRecentOrders);
+  document.getElementById('clearRecentOrdersBtn').addEventListener('click', clearRecentOrders);
+  document.getElementById('downloadRecentOrdersBtn').addEventListener('click', downloadRecentOrdersCsv);
   document.getElementById('publicFeedBtn').addEventListener('click', loadPublicFeed);
   document.getElementById('validateApiBtn').addEventListener('click', validateApiKey);
   document.getElementById('systemStatusBtn').addEventListener('click', loadSystemStatus);
