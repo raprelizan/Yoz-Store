@@ -279,6 +279,87 @@ app.get('/api/orders/recent', assertApiKey, (_req, res) => {
   return res.status(200).json({ success: true, data: recentOrders });
 });
 
+app.post('/api/execute-with-tracking', assertApiKey, async (req, res) => {
+  const { orderType, payload } = req.body || {};
+
+  if (!orderType || !payload) {
+    return res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'orderType و payload مطلوبان.' }
+    });
+  }
+
+  const maxAttempts = 6;
+  const waitMs = 2500;
+
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  try {
+    let submitResult;
+    let checkById = null;
+    let checkByRef = null;
+
+    if (orderType === 'mobile') {
+      submitResult = await oneClickRequest({ endpoint: '/mobile/send', method: 'POST', body: payload });
+      checkById = (id) => oneClickRequest({ endpoint: `/mobile/check-id/${encodeURIComponent(id)}`, method: 'GET' });
+      checkByRef = (ref) => oneClickRequest({ endpoint: `/mobile/check-ref/${encodeURIComponent(ref)}`, method: 'GET' });
+    } else if (orderType === 'internet') {
+      submitResult = await oneClickRequest({ endpoint: '/internet/send', method: 'POST', body: payload });
+      checkById = (id) => oneClickRequest({ endpoint: `/internet/check-id/${encodeURIComponent(id)}`, method: 'GET' });
+      checkByRef = (ref) => oneClickRequest({ endpoint: `/internet/check-ref/${encodeURIComponent(ref)}`, method: 'GET' });
+    } else {
+      submitResult = await oneClickRequest({ endpoint: '/gift-cards/placeOrder', method: 'POST', body: payload });
+      checkById = (id) => oneClickRequest({ endpoint: `/gift-cards/checkOrder/${encodeURIComponent(id)}`, method: 'GET' });
+    }
+
+    if (submitResult?.data?.success === false) {
+      return res.status(submitResult.status || 400).json(submitResult.data);
+    }
+
+    const submitData = submitResult.data?.data || submitResult.data || {};
+    const trackingId = submitData.id || submitData.orderId || payload.id || '';
+    const trackingRef = submitData.ref || payload.ref || '';
+    const history = [];
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      let statusResult = null;
+      if (trackingId && checkById) {
+        statusResult = await checkById(trackingId);
+      } else if (trackingRef && checkByRef) {
+        statusResult = await checkByRef(trackingRef);
+      }
+
+      const statusData = statusResult?.data?.data || statusResult?.data || {};
+      const statusValue = String(statusData.status || statusData.state || statusData.result || 'PENDING').toUpperCase();
+      history.push({ attempt, status: statusValue, raw: statusData });
+
+      if (['SUCCESS', 'COMPLETED', 'DONE', 'FAILED', 'REJECTED', 'CANCELLED'].includes(statusValue)) {
+        return res.status(200).json({
+          success: true,
+          data: { submit: submitResult.data, final: statusResult?.data || null, history }
+        });
+      }
+
+      await wait(waitMs);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        submit: submitResult.data,
+        final: null,
+        history,
+        warning: 'انتهت محاولات المتابعة وما زالت الحالة قيد المعالجة.'
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: { code: 'TRACKING_FLOW_FAILED', message: 'فشل تنفيذ الطلب مع المتابعة.', details: error.message }
+    });
+  }
+});
+
 app.get('/api/catalog', assertApiKey, async (_req, res) => {
   try {
     const [mobile, internet4g, internetAdsl, giftCards] = await Promise.all([

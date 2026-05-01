@@ -239,31 +239,41 @@ async function executeOrder(event) {
       throw new Error(`الدفع غير مؤكد بعد. الحالة الحالية: ${paymentState || 'UNKNOWN'}`);
     }
 
-    let executeResponse;
+    let executePayload;
 
     if (orderType === 'mobile') {
-      executeResponse = await api('mobileSendTopup', {
+      executePayload = {
         plan_code: productId,
         MSSIDN: number,
         amount: Number(document.getElementById('paymentAmount').value),
         ref: `MOB-${Date.now()}`
-      });
+      };
     } else if (orderType === 'internet') {
       const type = number.startsWith('213') ? '4G' : 'ADSL';
       await api('internetValidateNumber', { type, number });
-      executeResponse = await api('internetSendTopup', {
+      executePayload = {
         type,
         number,
         value: Number(productId),
         ref: `INT-${Date.now()}`
-      });
+      };
     } else {
-      executeResponse = await api('giftCardsPlaceOrder', {
+      executePayload = {
         productId,
         typeId: productId,
         quantity: 1,
         ref: `GFT-${Date.now()}`
-      });
+      };
+    }
+
+    const trackedResponseRaw = await fetch('/api/execute-with-tracking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderType, payload: executePayload })
+    });
+    const executeResponse = await trackedResponseRaw.json();
+    if (!trackedResponseRaw.ok || executeResponse.success === false) {
+      throw new Error(formatError(executeResponse));
     }
 
     await fetch('/api/orders/recent', {
@@ -274,8 +284,8 @@ async function executeOrder(event) {
         customer: { number },
         productId,
         amount: Number(document.getElementById('paymentAmount').value) || 0,
-        providerRef: executeResponse?.data?.ref || executeResponse?.data?.id || '',
-        status: executeResponse?.data?.status || 'SUBMITTED'
+        providerRef: executeResponse?.data?.submit?.data?.ref || executeResponse?.data?.submit?.data?.id || '',
+        status: executeResponse?.data?.final?.data?.status || 'PROCESSING'
       })
     });
 
