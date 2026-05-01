@@ -1,5 +1,6 @@
 const state = {
   activeTab: 'mobile',
+  search: '',
   products: {
     mobile: [],
     internet: [],
@@ -73,7 +74,11 @@ function extractListByShape(data = {}) {
 
 function renderProducts() {
   const container = document.getElementById('productsContainer');
-  const tabProducts = state.products[state.activeTab] || [];
+  const query = state.search.trim().toLowerCase();
+  const tabProducts = (state.products[state.activeTab] || []).filter((product) => {
+    if (!query) return true;
+    return String(product.name).toLowerCase().includes(query) || String(product.id).toLowerCase().includes(query);
+  });
 
   if (tabProducts.length === 0) {
     container.innerHTML = '<p>لا توجد منتجات حالياً.</p>';
@@ -85,7 +90,7 @@ function renderProducts() {
       ${tabProducts
         .map(
           (product) => `
-          <div class="product-item">
+          <div class="product-item" data-select-product="1" data-id="${product.id}" data-name="${product.name}">
             <div class="product-media">
               ${
                 product.image
@@ -106,6 +111,16 @@ function renderProducts() {
         .join('')}
     </div>
   `;
+
+  container.querySelectorAll('[data-select-product]').forEach((item) => {
+    item.addEventListener('click', () => {
+      const id = item.getAttribute('data-id') || '';
+      const name = item.getAttribute('data-name') || '';
+      document.getElementById('productId').value = id;
+      document.getElementById('executionResult').textContent = `تم اختيار المنتج: ${name} (${id})`;
+      window.scrollTo({ top: document.getElementById('executeOrderForm').offsetTop - 80, behavior: 'smooth' });
+    });
+  });
 }
 
 async function loadProducts() {
@@ -269,6 +284,34 @@ async function adminAction(action) {
   }
 }
 
+async function checkOrderStatus(event) {
+  event.preventDefault();
+  const output = document.getElementById('statusResult');
+
+  const service = document.getElementById('statusOrderType').value;
+  const lookupBy = document.getElementById('statusLookupBy').value;
+  const value = document.getElementById('statusLookupValue').value.trim();
+
+  try {
+    let responseData;
+
+    if (service === 'mobile') {
+      responseData = lookupBy === 'id' ? await api('mobileCheckById', { id: value }) : await api('mobileCheckByRef', { ref: value });
+    } else if (service === 'internet') {
+      responseData = lookupBy === 'id' ? await api('internetCheckById', { id: value }) : await api('internetCheckByRef', { ref: value });
+    } else {
+      if (lookupBy !== 'id') {
+        throw new Error('Gift Cards يدعم التحقق عبر ID فقط في هذا الإصدار.');
+      }
+      responseData = await api('giftCardsCheckOrder', { orderId: value });
+    }
+
+    output.textContent = JSON.stringify(responseData, null, 2);
+  } catch (error) {
+    output.textContent = `خطأ:\n${error.message}`;
+  }
+}
+
 async function loadAdminOverview() {
   const output = document.getElementById('adminResult');
   output.textContent = 'جاري تحميل نظرة عامة...';
@@ -296,8 +339,13 @@ function setupEvents() {
   });
 
   document.getElementById('refreshPricesBtn').addEventListener('click', loadProducts);
+  document.getElementById('productSearchInput').addEventListener('input', (event) => {
+    state.search = event.target.value || '';
+    renderProducts();
+  });
   document.getElementById('checkoutForm').addEventListener('submit', createPayment);
   document.getElementById('executeOrderForm').addEventListener('submit', executeOrder);
+  document.getElementById('statusForm').addEventListener('submit', checkOrderStatus);
   document.getElementById('validateApiBtn').addEventListener('click', validateApiKey);
 
   document.querySelectorAll('[data-admin]').forEach((button) => {

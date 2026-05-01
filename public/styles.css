@@ -107,6 +107,10 @@ input, select {
   padding: .6rem;
 }
 
+#productSearchInput {
+  margin-bottom: .8rem;
+}
+
 .result, pre {
   margin-top: 1rem;
   background: #0a1429;
@@ -130,6 +134,7 @@ input, select {
   gap: .5rem;
   background: linear-gradient(180deg, #112244 0%, #0d1b35 100%);
   transition: transform .18s ease, box-shadow .18s ease;
+  cursor: pointer;
 }
 
 .product-item:hover {

@@ -32,6 +32,7 @@
     <main class="container">
       <section class="card">
         <h2>المنتجات</h2>
+        <input id="productSearchInput" placeholder="ابحث عن منتج بالاسم أو المعرّف..." />
         <div class="tabs">
           <button data-tab="mobile" class="tab active">Mobile Topup</button>
           <button data-tab="internet" class="tab">Internet Topup</button>
@@ -95,6 +96,30 @@
           <button type="submit">التحقق من الدفع ثم التنفيذ</button>
         </form>
         <div id="executionResult" class="result"></div>
+      </section>
+
+      <section class="card">
+        <h2>متابعة حالة الطلب</h2>
+        <form id="statusForm">
+          <label>نوع الخدمة
+            <select id="statusOrderType" required>
+              <option value="mobile">Mobile</option>
+              <option value="internet">Internet</option>
+              <option value="giftCards">Gift Cards</option>
+            </select>
+          </label>
+          <label>طريقة التحقق
+            <select id="statusLookupBy" required>
+              <option value="id">ID</option>
+              <option value="ref">REF</option>
+            </select>
+          </label>
+          <label>القيمة
+            <input id="statusLookupValue" required placeholder="مثال: 12345 أو REF-001" />
+          </label>
+          <button type="submit">تحقق من الحالة</button>
+        </form>
+        <div id="statusResult" class="result"></div>
       </section>
 
       <section class="card">
