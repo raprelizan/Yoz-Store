@@ -10,7 +10,15 @@ const recentOrders = [];
 const executionRefs = new Map();
 const EXECUTION_REF_TTL_MS = 5 * 60 * 1000;
 
-app.use(express.json());
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  next();
+});
+app.use(express.json({ limit: '100kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 function assertApiKey(req, res, next) {
@@ -127,10 +135,13 @@ async function oneClickRequestWithFallback({ endpoints, method = 'GET', body, qu
 }
 
 async function fetchExternalJson(url) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
   const response = await fetch(url, {
     method: 'GET',
-    headers: { Accept: 'application/json' }
-  });
+    headers: { Accept: 'application/json' },
+    signal: controller.signal
+  }).finally(() => clearTimeout(timeoutId));
 
   if (!response.ok) {
     throw new Error(`External feed failed (${response.status}) for ${url}`);
