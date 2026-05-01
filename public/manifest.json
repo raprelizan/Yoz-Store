@@ -1,0 +1,12 @@
+{
+  "name": "Yoz Store",
+  "short_name": "YozStore",
+  "description": "Digital products marketplace powered by OneClickDZ API",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090f1f",
+  "theme_color": "#090f1f",
+  "icons": []
+}
