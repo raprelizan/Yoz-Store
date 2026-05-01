@@ -8,6 +8,15 @@ const state = {
   }
 };
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function formatError(errorPayload) {
   const message = errorPayload?.error?.message || errorPayload?.message || 'خطأ غير متوقع';
   const code = errorPayload?.error?.code ? `\nالكود: ${errorPayload.error.code}` : '';
@@ -90,20 +99,20 @@ function renderProducts() {
       ${tabProducts
         .map(
           (product) => `
-          <div class="product-item" data-select-product="1" data-id="${product.id}" data-name="${product.name}">
+          <div class="product-item" data-select-product="1" data-id="${escapeHtml(product.id)}" data-name="${escapeHtml(product.name)}">
             <div class="product-media">
               ${
                 product.image
-                  ? `<img src="${product.image}" alt="${product.name}" loading="lazy" />`
+                  ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" />`
                   : '<div class="product-placeholder">بدون صورة</div>'
               }
             </div>
-            <strong>${product.name}</strong>
-            <div>المعرّف: ${product.id}</div>
-            <div>السعر: ${product.price} ${product.currency}</div>
+            <strong>${escapeHtml(product.name)}</strong>
+            <div>المعرّف: ${escapeHtml(product.id)}</div>
+            <div>السعر: ${escapeHtml(product.price)} ${escapeHtml(product.currency)}</div>
             <details>
               <summary>تفاصيل إضافية من API</summary>
-              <pre>${JSON.stringify(product.raw, null, 2)}</pre>
+              <pre>${escapeHtml(JSON.stringify(product.raw, null, 2))}</pre>
             </details>
           </div>
         `
