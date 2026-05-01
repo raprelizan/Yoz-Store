@@ -366,6 +366,22 @@ async function loadAdminOverview() {
   }
 }
 
+async function loadSystemStatus() {
+  const output = document.getElementById('adminResult');
+  output.textContent = 'جاري فحص حالة النظام...';
+
+  try {
+    const response = await fetch('/api/system/status');
+    const data = await response.json();
+    if (!response.ok || data.success === false) {
+      throw new Error(formatError(data));
+    }
+    output.textContent = JSON.stringify(data, null, 2);
+  } catch (error) {
+    output.textContent = `خطأ:\n${error.message}`;
+  }
+}
+
 async function loadPublicFeed() {
   const output = document.getElementById('publicFeedResult');
   output.textContent = 'جاري التحميل...';
@@ -403,6 +419,7 @@ function setupEvents() {
   document.getElementById('recentOrdersBtn').addEventListener('click', loadRecentOrders);
   document.getElementById('publicFeedBtn').addEventListener('click', loadPublicFeed);
   document.getElementById('validateApiBtn').addEventListener('click', validateApiKey);
+  document.getElementById('systemStatusBtn').addEventListener('click', loadSystemStatus);
 
   document.querySelectorAll('[data-admin]').forEach((button) => {
     button.addEventListener('click', () => adminAction(button.dataset.admin));

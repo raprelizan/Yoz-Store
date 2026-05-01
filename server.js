@@ -34,6 +34,15 @@ function getValue(payload, keys = []) {
   return '';
 }
 
+function sanitizeString(value, max = 120) {
+  return String(value || '').trim().replace(/[<>`]/g, '').slice(0, max);
+}
+
+function ensureNumber(value, defaultValue = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : defaultValue;
+}
+
 async function oneClickRequest({ endpoint, method = 'GET', body, query }) {
   const url = new URL(`${baseUrl}${endpoint}`);
 
@@ -234,7 +243,7 @@ app.get('/api/health/validate', assertApiKey, async (_req, res) => {
 
 app.post('/api/checkout', assertApiKey, async (req, res) => {
   const { orderType, customer, payment } = req.body || {};
-  const amount = Number(payment?.amount || 0);
+  const amount = ensureNumber(payment?.amount, 0);
 
   if (!orderType || Number.isNaN(amount) || amount < 500) {
     return res.status(400).json({
@@ -248,8 +257,8 @@ app.post('/api/checkout', assertApiKey, async (req, res) => {
 
   const requestBody = {
     productInfo: {
-      title: `طلب ${orderType}`,
-      description: `عميل: ${customer?.number || 'N/A'}`,
+      title: `طلب ${sanitizeString(orderType, 24)}`,
+      description: `عميل: ${sanitizeString(customer?.number || 'N/A', 40)}`,
       amount
     },
     feeMode: 'NO_FEE'
@@ -309,16 +318,21 @@ app.post('/api/execute-with-tracking', assertApiKey, async (req, res) => {
     let checkById = null;
     let checkByRef = null;
 
+    const safePayload = {
+      ...payload,
+      ref: sanitizeString(payload?.ref || `REF-${Date.now()}`, 64)
+    };
+
     if (orderType === 'mobile') {
-      submitResult = await oneClickRequest({ endpoint: '/mobile/send', method: 'POST', body: payload });
+      submitResult = await oneClickRequest({ endpoint: '/mobile/send', method: 'POST', body: safePayload });
       checkById = (id) => oneClickRequest({ endpoint: `/mobile/check-id/${encodeURIComponent(id)}`, method: 'GET' });
       checkByRef = (ref) => oneClickRequest({ endpoint: `/mobile/check-ref/${encodeURIComponent(ref)}`, method: 'GET' });
     } else if (orderType === 'internet') {
-      submitResult = await oneClickRequest({ endpoint: '/internet/send', method: 'POST', body: payload });
+      submitResult = await oneClickRequest({ endpoint: '/internet/send', method: 'POST', body: safePayload });
       checkById = (id) => oneClickRequest({ endpoint: `/internet/check-id/${encodeURIComponent(id)}`, method: 'GET' });
       checkByRef = (ref) => oneClickRequest({ endpoint: `/internet/check-ref/${encodeURIComponent(ref)}`, method: 'GET' });
     } else {
-      submitResult = await oneClickRequest({ endpoint: '/gift-cards/placeOrder', method: 'POST', body: payload });
+      submitResult = await oneClickRequest({ endpoint: '/gift-cards/placeOrder', method: 'POST', body: safePayload });
       checkById = (id) => oneClickRequest({ endpoint: `/gift-cards/checkOrder/${encodeURIComponent(id)}`, method: 'GET' });
     }
 
@@ -327,8 +341,8 @@ app.post('/api/execute-with-tracking', assertApiKey, async (req, res) => {
     }
 
     const submitData = submitResult.data?.data || submitResult.data || {};
-    const trackingId = submitData.id || submitData.orderId || payload.id || '';
-    const trackingRef = submitData.ref || payload.ref || '';
+    const trackingId = submitData.id || submitData.orderId || safePayload.id || '';
+    const trackingRef = submitData.ref || safePayload.ref || '';
     const history = [];
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -368,6 +382,19 @@ app.post('/api/execute-with-tracking', assertApiKey, async (req, res) => {
       error: { code: 'TRACKING_FLOW_FAILED', message: 'فشل تنفيذ الطلب مع المتابعة.', details: error.message }
     });
   }
+});
+
+app.get('/api/system/status', (_req, res) => {
+  return res.status(200).json({
+    success: true,
+    data: {
+      service: 'Yoz Store',
+      apiBase: baseUrl,
+      hasApiKey: Boolean(apiKey),
+      recentOrdersCount: recentOrders.length,
+      timestamp: new Date().toISOString()
+    }
+  });
 });
 
 app.get('/api/catalog', assertApiKey, async (_req, res) => {

@@ -180,3 +180,9 @@ Endpoint المستخدم: `POST /api/execute-with-tracking`.
 - معلومات OSI
 
 وتم ربطها بواجهة عرض داخل الصفحة.
+
+
+## تعزيزات إضافية مكتملة
+
+- Sanitization أساسي للمدخلات النصية الحساسة قبل الإرسال للـ API (مثل `ref`, `orderType`, `customer number`).
+- Endpoint جديد `GET /api/system/status` لعرض حالة الخدمة محلياً (API base, وجود API key, عدد الطلبات المحلية, timestamp).
