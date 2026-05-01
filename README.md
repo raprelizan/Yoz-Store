@@ -211,3 +211,11 @@ Endpoint المستخدم: `POST /api/execute-with-tracking`.
 - `GET /api/public/prodmain/:id`
 
 وعند اختيار أي منتج في الواجهة يتم جلب تفاصيله (types / stock / prices by quantity) وعرضها مباشرة في قسم تفاصيل المنتج.
+
+## فحص سريع قبل التشغيل
+
+```bash
+npm run check
+```
+
+> ملاحظة: في بيئات مؤسسية قد يتم حجب تنزيل الحزم من npm registry (خطأ 403)، وهذا خارج منطق الكود نفسه.
