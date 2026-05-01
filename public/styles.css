@@ -11,7 +11,37 @@ body {
   margin: 0;
   background: linear-gradient(180deg, #090f1f 0%, #06101a 100%);
   color: var(--text);
-  font-family: "Tajawal", "Segoe UI", sans-serif;
+  font-family: "Cairo", "Tajawal", "Segoe UI", sans-serif;
+}
+
+.page-loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 20, 0.9);
+  display: grid;
+  place-content: center;
+  gap: 1rem;
+  z-index: 999;
+  text-align: center;
+}
+
+.page-loader.hidden {
+  display: none;
+}
+
+.pulse-dot {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #4da3ff 20%, #1b4d9f 100%);
+  margin: 0 auto;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.78); opacity: 0.6; }
+  50% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.78); opacity: 0.6; }
 }
 
 .hero {

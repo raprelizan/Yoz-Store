@@ -109,6 +109,7 @@ function renderProducts() {
 }
 
 async function loadProducts() {
+  const pageLoader = document.getElementById('pageLoader');
   const button = document.getElementById('refreshPricesBtn');
   button.disabled = true;
   button.textContent = 'جاري التحديث...';
@@ -150,6 +151,9 @@ async function loadProducts() {
   } catch (error) {
     alert(`تعذر جلب المنتجات:\n${error.message}`);
   } finally {
+    if (pageLoader) {
+      pageLoader.classList.add('hidden');
+    }
     button.disabled = false;
     button.textContent = 'تحديث المنتجات والأسعار';
   }
