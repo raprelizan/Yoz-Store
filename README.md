@@ -202,3 +202,12 @@ Endpoint المستخدم: `POST /api/execute-with-tracking`.
 - عند `POST /api/execute-with-tracking` يتم منع تنفيذ نفس `ref` خلال آخر 5 دقائق.
 - إذا تم تكرار `ref` يتم إرجاع `409` مع الكود `DUPLICATE_REF`.
 - هذا يمنع تنفيذ مكرر بالخطأ في عمليات الشحن.
+
+
+## العمل بالملفين المرسلين (prodmain flow)
+
+تمت إضافة endpoints متوافقة مع تدفق `prodmain`:
+- `GET /api/public/prodmain/all`
+- `GET /api/public/prodmain/:id`
+
+وعند اختيار أي منتج في الواجهة يتم جلب تفاصيله (types / stock / prices by quantity) وعرضها مباشرة في قسم تفاصيل المنتج.

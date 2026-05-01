@@ -539,6 +539,31 @@ app.get('/api/public-feed', async (_req, res) => {
   }
 });
 
+app.get('/api/public/prodmain/all', async (_req, res) => {
+  try {
+    const data = await fetchExternalJson('https://contabo-payzaad.oneclickdz.com/api/getnokey/prodmain/all');
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: { code: 'PRODMAIN_ALL_FAILED', message: 'تعذر جلب prodmain/all', details: error.message }
+    });
+  }
+});
+
+app.get('/api/public/prodmain/:id', async (req, res) => {
+  try {
+    const id = encodeURIComponent(sanitizeString(req.params.id, 80));
+    const data = await fetchExternalJson(`https://contabo-payzaad.oneclickdz.com/api/getnokey/prodmain/${id}/`);
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: { code: 'PRODMAIN_ID_FAILED', message: 'تعذر جلب prodmain/id', details: error.message }
+    });
+  }
+});
+
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

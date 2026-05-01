@@ -118,9 +118,41 @@ function renderProducts() {
       const name = item.getAttribute('data-name') || '';
       document.getElementById('productId').value = id;
       document.getElementById('executionResult').textContent = `تم اختيار المنتج: ${name} (${id})`;
+      loadProductDetails(id);
       window.scrollTo({ top: document.getElementById('executeOrderForm').offsetTop - 80, behavior: 'smooth' });
     });
   });
+}
+
+async function loadProductDetails(productId) {
+  const output = document.getElementById('productDetailsResult');
+  output.textContent = 'جاري تحميل تفاصيل المنتج...';
+  try {
+    const response = await fetch(`/api/public/prodmain/${encodeURIComponent(productId)}`);
+    const data = await response.json();
+    if (!response.ok || data.success === false) {
+      throw new Error(formatError(data));
+    }
+
+    const types = data?.data?.prods?.types || data?.data?.types || [];
+    const normalized = types.map((type) => ({
+      id: type._id,
+      name: type.name,
+      stock: {
+        total: type.tot,
+        used: type.cur,
+        available: Number(type.tot || 0) - Number(type.cur || 0)
+      },
+      prices: (type.prices || []).map((priceLevel) => ({
+        level: priceLevel.level,
+        quantities: (priceLevel.qt || []).map((q) => ({ q: q.q, price: q.p }))
+      }))
+    }));
+
+    output.textContent = JSON.stringify(normalized, null, 2);
+  } catch (error) {
+    output.textContent = `خطأ:\n${error.message}`;
+  }
 }
 
 async function loadProducts() {
