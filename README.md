@@ -78,3 +78,10 @@ npm run dev
 - لا يتم كشف المفتاح للواجهة الأمامية
 - Validation أساسي للمدخلات قبل أي طلب خارجي
 - تمرير أخطاء مزود الخدمة بشفافية لتسهيل الدعم
+
+
+## ملاحظة خاصة بـ Vite + React
+
+إذا استخدمت JSX داخل ملفات الصفحات، يجب أن تكون الامتدادات `.jsx` أو `.tsx`.
+تمت إضافة `frontend/src/pages/index.jsx` مع ملف `frontend/src/pages/index.js` لإعادة التصدير فقط حتى لا يظهر خطأ:
+`Failed to parse source for import analysis`.
