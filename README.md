@@ -96,3 +96,14 @@ npm run dev
   - السعر والعملة
   - تفاصيل إضافية مباشرة من استجابة API (داخل Details)
 - لا يتم استخدام Mock Data أو أسعار ثابتة.
+
+
+## توافق المسارات (حسب نسخ التوثيق)
+
+بعض حسابات OneClickDZ قد تعمل بأسماء endpoints مختلفة لنفس الخدمة.
+تمت إضافة fallback تلقائي في الخادم لمسارات المنتجات:
+- Mobile: `/mobile/plans` ثم `/mobile/list-plans`
+- Internet: `/internet/products` ثم `/internet/list-products`
+- Gift Cards: `/gift-cards/catalog` ثم `/gift-cards/get-catalog`
+
+هذا يضمن ظهور المنتجات تلقائياً حتى لو كان حسابك يعمل بصيغة المسارات البديلة.

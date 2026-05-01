@@ -91,12 +91,27 @@ async function oneClickRequest({ endpoint, method = 'GET', body, query }) {
   };
 }
 
+async function oneClickRequestWithFallback({ endpoints, method = 'GET', body, query }) {
+  let lastResult = null;
+
+  for (const endpoint of endpoints) {
+    const result = await oneClickRequest({ endpoint, method, body, query });
+    lastResult = result;
+
+    if (result?.data?.success !== false) {
+      return result;
+    }
+  }
+
+  return lastResult;
+}
+
 const routeMap = {
   validate: { endpoint: '/validate', method: 'GET' },
 
-  listMobilePlans: { endpoint: '/mobile/plans', method: 'GET' },
-  listInternetProducts: { endpoint: '/internet/products', method: 'GET' },
-  listGiftCardsCatalog: { endpoint: '/gift-cards/catalog', method: 'GET' },
+  listMobilePlans: { endpoint: '/mobile/plans', fallbackEndpoints: ['/mobile/list-plans'], method: 'GET' },
+  listInternetProducts: { endpoint: '/internet/products', fallbackEndpoints: ['/internet/list-products'], method: 'GET' },
+  listGiftCardsCatalog: { endpoint: '/gift-cards/catalog', fallbackEndpoints: ['/gift-cards/get-catalog'], method: 'GET' },
 
   createPaymentLink: { endpoint: '/ocpay/createLink', method: 'POST', required: ['productInfo'] },
   checkPayment: {
@@ -177,7 +192,7 @@ app.post('/api/oneclick/:action', assertApiKey, async (req, res) => {
   try {
     const endpoint = config.endpointBuilder ? config.endpointBuilder(payload) : config.endpoint;
     const requestConfig = {
-      endpoint,
+      endpoints: [endpoint, ...(config.fallbackEndpoints || [])],
       method: config.method
     };
 
@@ -187,7 +202,7 @@ app.post('/api/oneclick/:action', assertApiKey, async (req, res) => {
       requestConfig.body = payload;
     }
 
-    const result = await oneClickRequest(requestConfig);
+    const result = await oneClickRequestWithFallback(requestConfig);
     return res.status(result.status || 200).json(result.data);
   } catch (error) {
     return res.status(500).json({
