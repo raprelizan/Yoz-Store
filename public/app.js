@@ -93,16 +93,39 @@ async function loadProducts() {
   button.textContent = 'جاري التحديث...';
 
   try {
-    const [mobile, internet, giftCards] = await Promise.all([
+    const [mobileResult, internet4gResult, internetAdslResult, giftCardsResult] = await Promise.allSettled([
       api('listMobilePlans'),
-      api('listInternetProducts'),
+      api('listInternetProducts', { type: '4G' }),
+      api('listInternetProducts', { type: 'ADSL' }),
       api('listGiftCardsCatalog')
     ]);
 
-    state.products.mobile = simplifyProducts(extractListByShape(mobile.data));
-    state.products.internet = simplifyProducts(extractListByShape(internet.data));
-    state.products.giftCards = simplifyProducts(extractListByShape(giftCards.data));
+    if (mobileResult.status === 'fulfilled') {
+      state.products.mobile = simplifyProducts(extractListByShape(mobileResult.value.data));
+    }
+
+    const internetCombined = [];
+    if (internet4gResult.status === 'fulfilled') {
+      internetCombined.push(...extractListByShape(internet4gResult.value.data));
+    }
+    if (internetAdslResult.status === 'fulfilled') {
+      internetCombined.push(...extractListByShape(internetAdslResult.value.data));
+    }
+    state.products.internet = simplifyProducts(internetCombined);
+
+    if (giftCardsResult.status === 'fulfilled') {
+      state.products.giftCards = simplifyProducts(extractListByShape(giftCardsResult.value.data));
+    }
+
+    const failures = [mobileResult, internet4gResult, internetAdslResult, giftCardsResult]
+      .filter((result) => result.status === 'rejected')
+      .map((result) => result.reason?.message || 'خطأ غير معروف');
+
     renderProducts();
+
+    if (failures.length > 0) {
+      alert(`تم تحميل بعض المنتجات فقط.\n${failures.join('\n---\n')}`);
+    }
   } catch (error) {
     alert(`تعذر جلب المنتجات:\n${error.message}`);
   } finally {
