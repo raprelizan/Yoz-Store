@@ -266,9 +266,37 @@ async function executeOrder(event) {
       });
     }
 
+    await fetch('/api/orders/recent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: orderType,
+        customer: { number },
+        productId,
+        amount: Number(document.getElementById('paymentAmount').value) || 0,
+        providerRef: executeResponse?.data?.ref || executeResponse?.data?.id || '',
+        status: executeResponse?.data?.status || 'SUBMITTED'
+      })
+    });
+
     output.textContent = JSON.stringify(executeResponse, null, 2);
   } catch (error) {
     output.textContent = `خطأ أثناء التنفيذ:\n${error.message}`;
+  }
+}
+
+async function loadRecentOrders() {
+  const output = document.getElementById('recentOrdersResult');
+  output.textContent = 'جاري التحميل...';
+  try {
+    const response = await fetch('/api/orders/recent');
+    const data = await response.json();
+    if (!response.ok || data.success === false) {
+      throw new Error(formatError(data));
+    }
+    output.textContent = JSON.stringify(data.data || [], null, 2);
+  } catch (error) {
+    output.textContent = `خطأ:\n${error.message}`;
   }
 }
 
@@ -346,6 +374,7 @@ function setupEvents() {
   document.getElementById('checkoutForm').addEventListener('submit', createPayment);
   document.getElementById('executeOrderForm').addEventListener('submit', executeOrder);
   document.getElementById('statusForm').addEventListener('submit', checkOrderStatus);
+  document.getElementById('recentOrdersBtn').addEventListener('click', loadRecentOrders);
   document.getElementById('validateApiBtn').addEventListener('click', validateApiKey);
 
   document.querySelectorAll('[data-admin]').forEach((button) => {
@@ -356,3 +385,4 @@ function setupEvents() {
 
 setupEvents();
 loadProducts();
+loadRecentOrders();

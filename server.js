@@ -6,6 +6,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 const baseUrl = process.env.ONECLICK_BASE_URL || 'https://api.oneclickdz.com/v3';
 const apiKey = process.env.ONECLICK_API_KEY;
+const recentOrders = [];
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -251,6 +252,31 @@ app.post('/api/checkout', assertApiKey, async (req, res) => {
   });
 
   return res.status(paymentResult.status || 200).json(paymentResult.data);
+});
+
+app.post('/api/orders/recent', assertApiKey, (req, res) => {
+  const payload = req.body || {};
+  const entry = {
+    id: `LOCAL-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    type: payload.type || 'unknown',
+    customer: payload.customer || {},
+    productId: payload.productId || '',
+    amount: payload.amount || 0,
+    providerRef: payload.providerRef || '',
+    status: payload.status || 'CREATED'
+  };
+
+  recentOrders.unshift(entry);
+  if (recentOrders.length > 50) {
+    recentOrders.pop();
+  }
+
+  return res.status(200).json({ success: true, data: entry });
+});
+
+app.get('/api/orders/recent', assertApiKey, (_req, res) => {
+  return res.status(200).json({ success: true, data: recentOrders });
 });
 
 app.get('/api/catalog', assertApiKey, async (_req, res) => {
