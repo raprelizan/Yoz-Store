@@ -80,11 +80,9 @@ npm run dev
 - تمرير أخطاء مزود الخدمة بشفافية لتسهيل الدعم
 
 
-## ملاحظة خاصة بـ Vite + React
+## ملاحظة
 
-إذا استخدمت JSX داخل ملفات الصفحات، يجب أن تكون الامتدادات `.jsx` أو `.tsx`.
-تمت إضافة `frontend/src/pages/index.jsx` مع ملف `frontend/src/pages/index.js` لإعادة التصدير فقط حتى لا يظهر خطأ:
-`Failed to parse source for import analysis`.
+هذا المشروع يعمل كـ Express + Static Frontend عبر ملفات `public/` فقط، ولا يعتمد حالياً على صفحات React/Vite.
 
 
 ## عرض المنتجات تلقائياً (الاسم + الصورة + السعر)
