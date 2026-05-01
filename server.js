@@ -8,6 +8,7 @@ const baseUrl = process.env.ONECLICK_BASE_URL || 'https://api.oneclickdz.com/v3'
 const apiKey = process.env.ONECLICK_API_KEY;
 const recentOrders = [];
 const executionRefs = new Map();
+const EXECUTION_REF_TTL_MS = 5 * 60 * 1000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -42,6 +43,14 @@ function sanitizeString(value, max = 120) {
 function ensureNumber(value, defaultValue = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : defaultValue;
+}
+
+function cleanupExecutionRefs(now = Date.now()) {
+  for (const [ref, timestamp] of executionRefs.entries()) {
+    if (now - timestamp > EXECUTION_REF_TTL_MS) {
+      executionRefs.delete(ref);
+    }
+  }
 }
 
 async function oneClickRequest({ endpoint, method = 'GET', body, query }) {
@@ -118,7 +127,15 @@ async function oneClickRequestWithFallback({ endpoints, method = 'GET', body, qu
 }
 
 async function fetchExternalJson(url) {
-  const response = await fetch(url, { method: 'GET' });
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  });
+
+  if (!response.ok) {
+    throw new Error(`External feed failed (${response.status}) for ${url}`);
+  }
+
   const text = await response.text();
   try {
     return JSON.parse(text);
@@ -141,7 +158,7 @@ const routeMap = {
     endpointBuilder: (payload) => `/ocpay/checkPayment/${encodeURIComponent(getValue(payload, ['paymentRef', 'linkId', 'ref']))}`
   },
 
-  mobileSendTopup: { endpoint: '/mobile/send', method: 'POST', required: ['plan_code', 'MSSIDN', 'amount', 'ref'] },
+  mobileSendTopup: { endpoint: '/mobile/send', method: 'POST', required: ['plan_code', 'MSISDN', 'amount', 'ref'] },
   mobileCheckById: {
     method: 'GET',
     required: ['id'],
@@ -244,9 +261,10 @@ app.get('/api/health/validate', assertApiKey, async (_req, res) => {
 
 app.post('/api/checkout', assertApiKey, async (req, res) => {
   const { orderType, customer, payment } = req.body || {};
+  const rawAmount = Number(payment?.amount);
   const amount = ensureNumber(payment?.amount, 0);
 
-  if (!orderType || Number.isNaN(amount) || amount < 500) {
+  if (!orderType || !Number.isFinite(rawAmount) || amount < 500) {
     return res.status(400).json({
       success: false,
       error: {
@@ -339,6 +357,7 @@ app.post('/api/execute-with-tracking', assertApiKey, async (req, res) => {
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   try {
+    cleanupExecutionRefs();
     let submitResult;
     let checkById = null;
     let checkByRef = null;
@@ -350,7 +369,7 @@ app.post('/api/execute-with-tracking', assertApiKey, async (req, res) => {
 
     const now = Date.now();
     const existing = executionRefs.get(safePayload.ref);
-    if (existing && now - existing < 5 * 60 * 1000) {
+    if (existing && now - existing < EXECUTION_REF_TTL_MS) {
       return res.status(409).json({
         success: false,
         error: {
