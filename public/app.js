@@ -115,39 +115,36 @@ async function loadProducts() {
   button.textContent = 'جاري التحديث...';
 
   try {
-    const [mobileResult, internet4gResult, internetAdslResult, giftCardsResult] = await Promise.allSettled([
-      api('listMobilePlans'),
-      api('listInternetProducts', { type: '4G' }),
-      api('listInternetProducts', { type: 'ADSL' }),
-      api('listGiftCardsCatalog')
-    ]);
+    const catalogResponse = await fetch('/api/catalog');
+    const catalog = await catalogResponse.json();
+
+    if (!catalogResponse.ok || catalog.success === false) {
+      throw new Error(formatError(catalog));
+    }
+
+    const mobileResult = { status: 'fulfilled', value: catalog.data.mobile || {} };
+    const internet4gResult = { status: 'fulfilled', value: catalog.data.internet4g || {} };
+    const internetAdslResult = { status: 'fulfilled', value: catalog.data.internetAdsl || {} };
+    const giftCardsResult = { status: 'fulfilled', value: catalog.data.giftCards || {} };
 
     if (mobileResult.status === 'fulfilled') {
-      state.products.mobile = simplifyProducts(extractListByShape(mobileResult.value.data));
+      state.products.mobile = simplifyProducts(extractListByShape(mobileResult.value.data || mobileResult.value));
     }
 
     const internetCombined = [];
     if (internet4gResult.status === 'fulfilled') {
-      internetCombined.push(...extractListByShape(internet4gResult.value.data));
+      internetCombined.push(...extractListByShape(internet4gResult.value.data || internet4gResult.value));
     }
     if (internetAdslResult.status === 'fulfilled') {
-      internetCombined.push(...extractListByShape(internetAdslResult.value.data));
+      internetCombined.push(...extractListByShape(internetAdslResult.value.data || internetAdslResult.value));
     }
     state.products.internet = simplifyProducts(internetCombined);
 
     if (giftCardsResult.status === 'fulfilled') {
-      state.products.giftCards = simplifyProducts(extractListByShape(giftCardsResult.value.data));
+      state.products.giftCards = simplifyProducts(extractListByShape(giftCardsResult.value.data || giftCardsResult.value));
     }
-
-    const failures = [mobileResult, internet4gResult, internetAdslResult, giftCardsResult]
-      .filter((result) => result.status === 'rejected')
-      .map((result) => result.reason?.message || 'خطأ غير معروف');
 
     renderProducts();
-
-    if (failures.length > 0) {
-      alert(`تم تحميل بعض المنتجات فقط.\n${failures.join('\n---\n')}`);
-    }
   } catch (error) {
     alert(`تعذر جلب المنتجات:\n${error.message}`);
   } finally {
@@ -272,6 +269,22 @@ async function adminAction(action) {
   }
 }
 
+async function loadAdminOverview() {
+  const output = document.getElementById('adminResult');
+  output.textContent = 'جاري تحميل نظرة عامة...';
+
+  try {
+    const response = await fetch('/api/admin/overview');
+    const data = await response.json();
+    if (!response.ok || data.success === false) {
+      throw new Error(formatError(data));
+    }
+    output.textContent = JSON.stringify(data, null, 2);
+  } catch (error) {
+    output.textContent = `خطأ:\n${error.message}`;
+  }
+}
+
 function setupEvents() {
   document.querySelectorAll('.tab').forEach((button) => {
     button.addEventListener('click', () => {
@@ -290,6 +303,7 @@ function setupEvents() {
   document.querySelectorAll('[data-admin]').forEach((button) => {
     button.addEventListener('click', () => adminAction(button.dataset.admin));
   });
+  document.getElementById('overviewBtn').addEventListener('click', loadAdminOverview);
 }
 
 setupEvents();

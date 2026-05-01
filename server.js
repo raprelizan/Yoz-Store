@@ -253,6 +253,82 @@ app.post('/api/checkout', assertApiKey, async (req, res) => {
   return res.status(paymentResult.status || 200).json(paymentResult.data);
 });
 
+app.get('/api/catalog', assertApiKey, async (_req, res) => {
+  try {
+    const [mobile, internet4g, internetAdsl, giftCards] = await Promise.all([
+      oneClickRequestWithFallback({
+        endpoints: ['/mobile/plans', '/mobile/list-plans'],
+        method: 'GET'
+      }),
+      oneClickRequestWithFallback({
+        endpoints: ['/internet/products', '/internet/list-products'],
+        method: 'GET',
+        query: { type: '4G' }
+      }),
+      oneClickRequestWithFallback({
+        endpoints: ['/internet/products', '/internet/list-products'],
+        method: 'GET',
+        query: { type: 'ADSL' }
+      }),
+      oneClickRequestWithFallback({
+        endpoints: ['/gift-cards/catalog', '/gift-cards/get-catalog'],
+        method: 'GET'
+      })
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        mobile: mobile.data,
+        internet4g: internet4g.data,
+        internetAdsl: internetAdsl.data,
+        giftCards: giftCards.data
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'CATALOG_FETCH_FAILED',
+        message: 'تعذر تحميل الكتالوج الكامل من OneClickDZ.',
+        details: error.message
+      }
+    });
+  }
+});
+
+app.get('/api/admin/overview', assertApiKey, async (_req, res) => {
+  try {
+    const [balance, transactions, mobileTopups, internetTopups, giftOrders] = await Promise.all([
+      oneClickRequest({ endpoint: '/account/balance', method: 'GET' }),
+      oneClickRequest({ endpoint: '/account/transactions', method: 'GET' }),
+      oneClickRequest({ endpoint: '/mobile/list', method: 'GET' }),
+      oneClickRequest({ endpoint: '/internet/list', method: 'GET' }),
+      oneClickRequest({ endpoint: '/gift-cards/list', method: 'GET' })
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        balance: balance.data,
+        transactions: transactions.data,
+        mobileTopups: mobileTopups.data,
+        internetTopups: internetTopups.data,
+        giftOrders: giftOrders.data
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'ADMIN_OVERVIEW_FAILED',
+        message: 'تعذر تحميل نظرة عامة للحساب من OneClickDZ.',
+        details: error.message
+      }
+    });
+  }
+});
+
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
