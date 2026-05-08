@@ -1,7 +1,24 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { Dashboard, UserPage, AdminPage, LoginPage } from './pages';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import Layout from './components/Layout';
+import { Admin, Home, Login, User } from './pages';
+import './styles.css';
 
-function App(){return <BrowserRouter><div style={{padding:20,fontFamily:'Arial'}}><nav><Link to='/'>Dashboard</Link> | <Link to='/user'>User</Link> | <Link to='/admin'>Admin</Link> | <Link to='/login'>Login</Link></nav><Routes><Route path='/' element={<Dashboard/>}/><Route path='/user' element={<UserPage/>}/><Route path='/admin' element={<AdminPage/>}/><Route path='/login' element={<LoginPage/>}/></Routes></div></BrowserRouter>}
-createRoot(document.getElementById('root')).render(<App/>);
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/user" element={<User />} />
+            <Route path="/admin" element={<Admin />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  </React.StrictMode>
+);
